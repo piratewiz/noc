@@ -6,3 +6,7 @@ dist/
 
 # Logs
 .DS_STORE
+
+logs/
+
+.env

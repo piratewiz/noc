@@ -3,8 +3,6 @@ import { LogDatasource } from "../../domain/datasources/log.datasource";
 import { LogEntity, LogSeverityLevel } from "../../domain/entities/log.entity";
 
 
-
-
 export class FileSystemDatasource implements LogDatasource {
     
     private readonly logPath = 'logs/';
@@ -17,7 +15,7 @@ export class FileSystemDatasource implements LogDatasource {
     }
 
     private createLogsFiles = () => {
-        if(fs.existsSync(this.logPath)) {
+        if(!fs.existsSync(this.logPath)) {
             fs.mkdirSync(this.logPath);
         }
 
@@ -33,14 +31,37 @@ export class FileSystemDatasource implements LogDatasource {
     }
 
 
-    saveLog(log: LogEntity): Promise<void> {
-        throw new Error("Method not implemented.");
+    async saveLog(newLog: LogEntity): Promise<void> {
+        const logAsJson = `${JSON.stringify(newLog)}\n`
+        fs.appendFileSync(this.allLogsPath, logAsJson);
+
+        if(newLog.level === LogSeverityLevel.low) return;
+
+        if(newLog.level === LogSeverityLevel.medium) {
+            fs.appendFileSync(this.mediumLogsPath, logAsJson);
+        } else {
+            fs.appendFileSync(this.highLogsPath, logAsJson);
+        }
+    }
+
+    private getLogsFromFile = (path: string): LogEntity[] => {
+        const content = fs.readFileSync(path, 'utf-8');
+        const logs = content.split('\n').map(log => LogEntity.fromJson(log));
+        return logs;
     }
 
 
-    getLogs(severityLevel: LogSeverityLevel): Promise<LogEntity[]> {
-        throw new Error("Method not implemented.");
+    async getLogs(severityLevel: LogSeverityLevel): Promise<LogEntity[]> {
+
+        switch(severityLevel) {
+            case LogSeverityLevel.low:
+                return this.getLogsFromFile(this.allLogsPath);
+            case LogSeverityLevel.medium :
+                return this.getLogsFromFile(this.mediumLogsPath);
+            case LogSeverityLevel.high:
+                return this.getLogsFromFile(this.highLogsPath);
+            default:
+                throw new Error(`${severityLevel} not implemented`);
+        }
     }
-
-
 }
